@@ -11,48 +11,67 @@ namespace mailManager
 {
     
 
-    public class mailManager
+    public class MailManager
     {
         readonly bool isInteractive = false;
+
         public static void Main(String[] args)
         {
-            if(args.Length != 0) {
+            MailManager mail = new();
+            
+
+            if (args.Length != 0) {
                 if (args[0]=="/i")
                 {
-
+                    InteractiveMail inter = new(mail);
+                    inter.StartInteractiveWorkflow();
                 }
                 Console.WriteLine("");
                 Console.ReadLine();
-            }
-
-
-
-
-            try
+            } else
             {
-                mailManager mail = new();
+                try
+                {
+                    mail.AutomatedLogin();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error: " + e.Message);
+                }
+                
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("Error: "+e.Message);
-            }
+
+
+
+
+            
 
         }
 
-        private Credentials credentials;
-        public mailManager()
+        internal Credentials[] credentials;
+        public MailManager()
         {
+            credentials = Array.Empty<Credentials>();
             isInteractive = true;
-            GetCredentials();
+            
+        }
+        internal void AutomatedLogin()
+        {
+            credentials = GetCredentials();
+            if(credentials == null)
+            {
+                Console.WriteLine("No saved Credentials found");
+                return;
+            }
             QueryServers();
         }
-        private void QueryServers()
+        internal void QueryServers()
         {
             using (var client = new ImapClient())
             {
                 client.Connect("secureimap.t-online.de", 993, true);
 
-                client.Authenticate(credentials.name, credentials.password);
+                client.Authenticate(credentials[0].name, credentials[0].password);
 
                 // The Inbox folder is always available on all IMAP servers...
                 var inbox = client.Inbox;
@@ -78,7 +97,7 @@ namespace mailManager
             }
 
         }
-        private void PrintFolders(ImapClient client, FolderNamespace nmspace)
+        internal void PrintFolders(ImapClient client, FolderNamespace nmspace)
         {
             Console.WriteLine("Printing for Namespace: "+nmspace.Path+" with seperator \""+nmspace.DirectorySeparator+"\"");
             var folder = client.GetFolders(nmspace, false);
@@ -87,16 +106,25 @@ namespace mailManager
                 Console.WriteLine(fol.FullName);
             }
         }
-        private void GetCredentials(string path = "credentials.json")
+        internal static Credentials[] GetCredentials(string path = "credentials.json")
         {
+            Credentials[] credentials;
+            string json = "";
             //string dir = System.IO.Path.GetDirectoryName(
-                //System.Reflection.Assembly.GetExecutingAssembly().Location);
+            //System.Reflection.Assembly.GetExecutingAssembly().Location);
             //string file = dir + path;
             Console.WriteLine(path);
             using StreamReader r = new(path);
-            string json = r.ReadToEnd();
-            credentials = JsonConvert.DeserializeObject<Credentials>(json);
-            Console.WriteLine(credentials.name);
+            try
+            {
+                json = r.ReadToEnd();
+            }
+            catch (Exception)
+            {
+                Console.WriteLine("Credentials.json not found");
+            }
+            
+            return credentials = JsonConvert.DeserializeObject<Credentials[]>(json);
         }
     }
     public struct Credentials

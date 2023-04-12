@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "mailManager": {
+      "commandName": "Project",
+      "commandLineArgs": "/i"
+    }
+  }
+}
