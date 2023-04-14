@@ -49,6 +49,8 @@ namespace mailManager
         }
 
         internal Credentials[] credentials;
+        private ImapClient imapClient;
+        private IMailFolder inbox;
         public MailManager()
         {
             credentials = Array.Empty<Credentials>();
@@ -63,28 +65,28 @@ namespace mailManager
                 Console.WriteLine("No saved Credentials found");
                 return;
             }
-            QueryServers();
+            QueryServer(credentials[0]);
+            CloseConnection();
         }
-        internal void QueryServers()
+        internal void QueryServer(Credentials cred)
         {
-            using (var client = new ImapClient())
-            {
-                client.Connect("secureimap.t-online.de", 993, true);
+            imapClient = new ImapClient();
+                imapClient.Connect(cred.host, 993, true);
 
-                client.Authenticate(credentials[0].name, credentials[0].password);
+                imapClient.Authenticate(cred.name, cred.password);
 
                 // The Inbox folder is always available on all IMAP servers...
-                var inbox = client.Inbox;
+                inbox = imapClient.Inbox;
                 inbox.Open(FolderAccess.ReadOnly);
 
                 Console.WriteLine("Total messages: {0}", inbox.Count);
                 Console.WriteLine("Recent messages: {0}", inbox.Recent);
                 Console.WriteLine("\nSearch Folders:");
-                foreach (var nmspace in client.PersonalNamespaces)
+                foreach (var nmspace in imapClient.PersonalNamespaces)
                 {
-                    PrintFolders(client,nmspace);
+                    PrintFolders(imapClient, nmspace);
                 }
-                
+
 
                 //for (int i = 0; i < inbox.Count; i++)
                 //{
@@ -92,9 +94,7 @@ namespace mailManager
                 //    Console.WriteLine("Subject: {0}", message.Subject);
                 //}
 
-                client.Disconnect(true);
-                Console.ReadLine();
-            }
+                
 
         }
         internal void PrintFolders(ImapClient client, FolderNamespace nmspace)
@@ -126,9 +126,41 @@ namespace mailManager
             
             return credentials = JsonConvert.DeserializeObject<Credentials[]>(json);
         }
+        internal void AddFolder(string folderName)
+        {
+            inbox.Create(folderName,true);
+        }
+        internal void DeleteFolder(string folderName)
+        {
+            IMailFolder folder = inbox.GetSubfolder(folderName);
+            if(folder == null) {
+                Console.WriteLine("No such Folder");
+                return;
+            }
+            folder.Open(FolderAccess.ReadOnly);
+            if(folder.Count != 0) { Console.WriteLine("Folder not empty");return; }
+            folder?.Delete();
+        }
+        internal void CountFolder(string folderName)
+        {
+            IMailFolder folder = inbox.GetSubfolder(folderName);
+            if (folder == null)
+            {
+                Console.WriteLine("No such Folder");
+                return;
+            }
+            folder.Open(FolderAccess.ReadOnly);
+            Console.WriteLine($"There are {folder.Count} messages in this folder");
+        }
+        internal void CloseConnection()
+        {
+            imapClient?.Disconnect(true);
+        }
     }
     public struct Credentials
     {
+        public string host;
+        public int port;
         public string name;
         public string password;
     }
