@@ -21,7 +21,7 @@ namespace mailManager
         public void StartInteractiveWorkflow()
         {
             Console.Clear();
-            Console.WriteLine("Welcome to the interactive MailManager");
+            Console.WriteLine("Welcome to the interactive Mail Manager");
             Console.WriteLine("Saved Credentials:");
             LoadSavedCredentials();
             Console.ReadLine();
@@ -54,8 +54,14 @@ namespace mailManager
             {
                 Console.WriteLine("Host:");
                 SessionCredentials.host = Console.ReadLine();
-                Console.WriteLine("Host:");
-                SessionCredentials.port = Int32.Parse(Console.ReadLine());
+                Console.WriteLine("Port:");
+                try
+                {
+                    SessionCredentials.port = Int32.Parse(Console.ReadLine());
+                } catch (Exception e)
+                {
+
+                }
                 Console.WriteLine("Username:");
                 input = Console.ReadLine();
                 SessionCredentials.name = input != null ? input : "";
@@ -116,7 +122,7 @@ namespace mailManager
             {
                 Console.WriteLine("Options:");
                 Console.WriteLine("Write /q to quit");
-                Console.WriteLine("Write /c to coun the messages in a folder");
+                Console.WriteLine("Write /c to count the messages in a folder");
                 Console.WriteLine("Write /a to add a folder");
                 Console.WriteLine("Write /d to delete a folder");
 

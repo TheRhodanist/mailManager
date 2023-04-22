@@ -51,8 +51,8 @@ namespace mailManager
         }
 
         internal Credentials[]? credentials;
-        private ImapClient imapClient;
-        private IMailFolder inbox;
+        private ImapClient? imapClient;
+        private IMailFolder? inbox;
         public MailManager()
         {
             credentials = Array.Empty<Credentials>();
@@ -69,17 +69,27 @@ namespace mailManager
             }
             for (int i = 0; i < credentials.Length; i++)
             {
-                QueryServer(credentials[i]);
+                QueryServer(credentials[i],true);
                 CloseConnection();
             }
 
         }
-        internal void QueryServer(Credentials cred)
+        internal void QueryServer(Credentials cred, Boolean automated = false)
         {
             imapClient = new ImapClient();
-            imapClient.Connect(cred.host, 993, true);
-
-            imapClient.Authenticate(cred.name, cred.password);
+            try
+            {
+                imapClient.Connect(cred.host, 993, true);
+                imapClient.Authenticate(cred.name, cred.password);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("Connection could not be established:");
+                Console.WriteLine(e.Message);
+                imapClient.Dispose();
+                imapClient = null;
+                return;
+            }
 
             // The Inbox folder is always available on all IMAP servers...
             inbox = imapClient.Inbox;
@@ -103,7 +113,13 @@ namespace mailManager
 
 
         }
-        internal void PrintFolders(ImapClient client, FolderNamespace nmspace)
+
+        /// <summary>
+        /// Prints a list of folder for a given namespace using the provided client
+        /// </summary>
+        /// <param name="client">The Client/Connection on which this should be executed</param>
+        /// <param name="nmspace">Namespace for which its folders are to be printed</param>
+        internal static void PrintFolders(ImapClient client, FolderNamespace nmspace)
         {
             Console.WriteLine("Printing for Namespace: " + nmspace.Path + " with seperator \"" + nmspace.DirectorySeparator + "\"");
             var folder = client.GetFolders(nmspace, false);
@@ -113,11 +129,22 @@ namespace mailManager
             }
         }
 
+
+        /// <summary>
+        /// Adds a folder under inbox with the specified name
+        /// </summary>
+        /// <param name="folderName">Name of the folder to be added</param>
+        /// <returns>The newly created folder</returns>
         internal void AddFolder(string folderName)
         {
             inbox.Create(folderName, true);
         }
 
+
+        /// <summary>
+        /// Deletes a specified folder under inbox, provided the folder is empty
+        /// </summary>
+        /// <param name="folderName">Name of the folder to delete</param>
         internal void DeleteFolder(string folderName)
         {
             IMailFolder folder = inbox.GetSubfolder(folderName);
@@ -130,6 +157,12 @@ namespace mailManager
             if (folder.Count != 0) { Console.WriteLine("Folder not empty"); return; }
             folder?.Delete();
         }
+
+
+        /// <summary>
+        /// Outputs the number of messages in a specified folder
+        /// </summary>
+        /// <param name="folderName">Name of the folder from which messages are to be counted</param>
         internal void CountFolder(string folderName)
         {
             IMailFolder folder = inbox.GetSubfolder(folderName);
